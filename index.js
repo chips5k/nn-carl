@@ -46,61 +46,42 @@ const learn = (nn, inputs) => {
 
     
     //loop over each layer
-    for(layer of nn.layers) {
-        // if layer already activated, skip it
-
-        for(n, ni of layer) {
-            const sum = n.weights.reduce((acc, w, i) => {
-
-                const inputValue = n.value !== null ? n.value : nn.layers[ni - 1]nn.layers[ni - 1].value
-                return acc + inputs[i] * w + n.bias
-            }, 0);
-        
-            if(sum > n.threshold) {
-                n.activated = true;
-            }
+    nn.forEach(layer => {
+         // if layer already activated, skip it
+         if(!layer.processed) {
+            layer.forEach((neuron, i) => {
+                console.log(neuron, i);
+            });
         }
-    } 
+    });
 }
 
-
-
-// for(n of hidden) {
-//     const sum = n.weights.reduce((acc, w, i) => {
-//         return acc + inputs[i] * w + n.bias
-//     }, 0);
-
-//     if(sum > n.threshold) {
-//         n.activated = true;
-//     }
-// } 
-
-
-
+const BOARD_MAX_X = 25;
+const BOARD_MAX_Y = 10;
 
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-const objectA = [0, 0]
-const objectB = [1, 0]
+const objectA = { label: 'A', x: 0, y: 0 };
+const objectB = { label: 'B', x: 1, y: 0 };
 
 objects = [objectA, objectB];
 
 const reset = () => {
-    objectA[0] = 0;
-    objectA[1] = 0;
-    objectB[0] = 1;
-    objectB[1] = 0;
+    objectA.x = 0;
+    objectA.y = 0;
+    objectB.x = 1;
+    objectB.y = 0;
 };
 
 const render = () => {
     let string = ''
-    for (y = 0; y <= 10; y++) {
-        for (x = 0; x <= 10; x++) {
-            objectString = '0';
+    for (y = 0; y <= BOARD_MAX_Y; y++) {
+        for (x = 0; x <= BOARD_MAX_X; x++) {
+            objectString = '-';
             for (object of objects) {
-                if (object[0] === x && object[1] === y) {
-                    objectString = 'X'
+                if (object.x === x && object.y === y) {
+                    objectString = object.label
                 }
             }
             string += ' ' + objectString
@@ -111,16 +92,16 @@ const render = () => {
 }
 
 const colliding = (object, otherObjects) => {
-    if (object[0] <= 0 || object[0] >= 10) {
+    if (object.x <= 0 || object.x >= BOARD_MAX_X) {
         return true;
     }
 
-    if (object[1] <= 0 || object[1] >= 10) {
+    if (object.y <= 0 || object.y >= BOARD_MAX_Y) {
         return true;
     }
 
     for (oo in otherObjects) {
-        if (oo[0] === object[0] && oo[1] === object[1]) {
+        if (oo.x === object.x && oo.y === object.y) {
             return true;
         }
     }
@@ -130,12 +111,12 @@ const update = () => {
     const aX = 1;
     const aY = 0;
 
-    if (colliding(objectA, [objectB])) {
-        throw new Error('Collision detected');
-    }
+    // if (colliding(objectA, [objectB])) {
+    //     throw new Error('Collision detected');
+    // }
 
-    objectA[0] += aX;
-    objectA[1] += aY
+    objectA.x += aX;
+    objectA.y += aY
 
 
 };
