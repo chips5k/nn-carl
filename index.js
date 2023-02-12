@@ -5,30 +5,30 @@ const generateNN = () => {
         {
             layer: 'input',
             neurons: [
-                { value: null },
-                { value: null },
-                { value: null },
-                { value: null }
+                { value: 0, activated: true },
+                { value: 0, activated: true },
+                { value: 0, activated: true },
+                { value: 0, activated: true }
             ],
             processed: false
         },
         {
             layer: 'hidden-1',
             neurons: [
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 }
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 }
             ],
             processed: false
         },
         {
             layer: 'output',
             neurons: [
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: null, threshold: 1 }
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
+                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 }
             ],
             processed: false
         }
@@ -36,24 +36,34 @@ const generateNN = () => {
 };
 
 
-const learn = (nn, inputs) => {
+const determineOutputs = (nn, inputs) => {
     //populate the input layet with inputs
-    nn[0].neurons.forEach((n, i) => {   
+    nn[0].neurons.forEach((n, i) => {
         n.value = inputs[i];
+        n.activated = true;
     });
 
     nn[0].processed = true;
 
-    
     //loop over each layer
-    nn.forEach(layer => {
-         // if layer already activated, skip it
-         if(!layer.processed) {
-            layer.forEach((neuron, i) => {
-                console.log(neuron, i);
+    nn.forEach((layer, layerIndex) => {
+        // if layer already activated, skip it
+        if (!layer.processed) {
+            const prevLayer = nn[layerIndex - 1];
+            layer.neurons.forEach((neuron, neuronIndex) => {
+
+                const sum = prevLayer.neurons.reduce((acc, pn, pni) => {
+                    if (pn.activated) {
+                        return acc + pn.value * neuron.weights[pni] + neuron.bias;
+                    }
+                    return acc;
+                }, 0);
+                neuron.value = sum;
+                neuron.activated = sum > neuron.threshold
             });
         }
     });
+    return nn[nn.length - 1].neurons.map(n => n.value > 0 ? 1 : 0);
 }
 
 const BOARD_MAX_X = 25;
@@ -107,33 +117,66 @@ const colliding = (object, otherObjects) => {
     }
 }
 
-const update = () => {
-    const aX = 1;
-    const aY = 0;
-
-    // if (colliding(objectA, [objectB])) {
-    //     throw new Error('Collision detected');
-    // }
+const update = (inputs) => {
+    const aX = inputs[1] + -inputs[3];
+    const aY = inputs[0] + -inputs[2];
 
     objectA.x += aX;
     objectA.y += aY
 
+    if (colliding(objectA, [objectB])) {
+        throw new Error('Collision detected');
+    }
 
 };
 
 const end = Date.now() + 5 * 1000;
 
+const nn = generateNN();
+
+
+const determineInputs = () => {
+
+    const forwardX = objectA.x + 1;
+    const backwardX = objectA.x - 1;
+    const forwardY = objectA.y + 1;
+    const backwardY = objectA.y - 1;
+
+    const inputs = [0, 0, 0, 0];
+
+    if (backwardY <= 0) {
+        inputs[0] = 1;
+    }
+
+    if (forwardX >= BOARD_MAX_X) {
+        inputs[1] = 1;
+    }
+
+    if (forwardY >= BOARD_MAX_Y) {
+        inputs[2] = 1
+    }
+
+    if (backwardX <= 0) {
+        inputs[3] = 1;
+    }
+
+    return inputs;
+}
+
 const loop = async () => {
     while (Date.now() <= end) {
-        try {
-            update();
-        } catch (e) {
-            reset();
-        }
         console.clear();
         console.log('\n');
         console.log(render());
-        await delay(100) /// waiting 1 second.
+        try {
+            const inputs = determineInputs();
+            const outputs = determineOutputs(nn, inputs);
+            update(outputs);
+        } catch (e) {
+            reset();
+        }
+
+        await delay(500) /// waiting 1 second.
     }
 }
 
