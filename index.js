@@ -73,14 +73,14 @@ const BOARD_MAX_Y = 10;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 const objectA = { label: 'A', x: 0, y: 0 };
-const objectB = { label: 'B', x: 1, y: 0 };
+const objectB = { label: 'B', x: 0, y: 0 };
 
 objects = [objectA, objectB];
 
 const reset = () => {
     objectA.x = 0;
     objectA.y = 0;
-    objectB.x = 1;
+    objectB.x = 8;
     objectB.y = 0;
 };
 
@@ -102,16 +102,19 @@ const render = () => {
 }
 
 const colliding = (object, otherObjects) => {
-    if (object.x <= 0 || object.x >= BOARD_MAX_X) {
+    if (object.x < 0 || object.x > BOARD_MAX_X) {
+        console.log('this')
         return true;
     }
 
-    if (object.y <= 0 || object.y >= BOARD_MAX_Y) {
+    if (object.y < 0 || object.y > BOARD_MAX_Y) {
+        console.log('that')
         return true;
     }
 
     for (oo in otherObjects) {
         if (oo.x === object.x && oo.y === object.y) {
+            console.log('those');
             return true;
         }
     }
@@ -164,6 +167,7 @@ const determineInputs = () => {
 }
 
 const loop = async () => {
+    reset();
     while (Date.now() <= end) {
         console.clear();
         console.log('\n');
@@ -172,6 +176,7 @@ const loop = async () => {
             const inputs = determineInputs();
             const outputs = determineOutputs(nn, inputs);
             update(outputs);
+            
         } catch (e) {
             reset();
         }
