@@ -197,22 +197,18 @@ const loop = async () => {
             const prevDistanceToFinish = finishCoords[0] + finishCoords[1] - currentCoords[0] + currentCoords[1];
             const newDistanceToFinish = finishCoords[0] + finishCoords[1] - newCoords[0] + newCoords[1];
             
-       
+            
+            // TODO backprop based on which neurons should/shouldnt have triggered
             let updateWeight = 0;
             if(didMove) {
                 updateWeight += 0.05;
-            } else {
-                updateWeight -= 0.01;
-            }
+            } 
 
            
             if(newDistanceToFinish < prevDistanceToFinish) {
                 updateWeight += 0.05;
-            } else {
-                updateWeight -= 0.01;
             }
 
-            console.log(updateWeight);
             updateWeights(updateWeight);
             
         } catch (e) {
