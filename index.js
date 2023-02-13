@@ -1,6 +1,8 @@
 
 
+
 const generateNN = () => {
+    
     return [
         {
             layer: 'input',
@@ -15,20 +17,20 @@ const generateNN = () => {
         {
             layer: 'hidden-1',
             neurons: [
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 }
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false }
             ],
             processed: false
         },
         {
             layer: 'output',
             neurons: [
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 },
-                { weights: [0, 0, 0, 0], bias: 0.1, value: 0, threshold: 0.3 }
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false },
+                { weights: [Math.random(), Math.random(), Math.random(), Math.random()], bias: 0.1, value: 0, threshold: 1, activated: false }
             ],
             processed: false
         }
@@ -37,7 +39,7 @@ const generateNN = () => {
 
 
 const determineOutputs = (nn, inputs) => {
-    //populate the input layet with inputs
+    //populate the input layer with inputs
     nn[0].neurons.forEach((n, i) => {
         n.value = inputs[i];
         n.activated = true;
@@ -47,23 +49,21 @@ const determineOutputs = (nn, inputs) => {
 
     //loop over each layer
     nn.forEach((layer, layerIndex) => {
-        // if layer already activated, skip it
         if (!layer.processed) {
             const prevLayer = nn[layerIndex - 1];
-            layer.neurons.forEach((neuron, neuronIndex) => {
-
+            layer.neurons.forEach((neuron) => {
                 const sum = prevLayer.neurons.reduce((acc, pn, pni) => {
                     if (pn.activated) {
-                        return acc + pn.value * neuron.weights[pni] + neuron.bias;
+                        return acc + pn.value * neuron.weights[pni];
                     }
                     return acc;
-                }, 0);
+                }, neuron.bias);
                 neuron.value = sum;
-                neuron.activated = sum > neuron.threshold
+                neuron.activated = neuron.value > neuron.threshold
             });
         }
     });
-    return nn[nn.length - 1].neurons.map(n => n.value > 0 ? 1 : 0);
+    return nn[nn.length - 1].neurons.map(n => n.activated ? 1 : 0);
 }
 
 const BOARD_MAX_X = 25;
@@ -103,18 +103,15 @@ const render = () => {
 
 const colliding = (object, otherObjects) => {
     if (object.x < 0 || object.x > BOARD_MAX_X) {
-        console.log('this')
         return true;
     }
 
     if (object.y < 0 || object.y > BOARD_MAX_Y) {
-        console.log('that')
         return true;
     }
 
-    for (oo in otherObjects) {
+    for (oo of otherObjects) {
         if (oo.x === object.x && oo.y === object.y) {
-            console.log('those');
             return true;
         }
     }
@@ -126,7 +123,7 @@ const update = (inputs) => {
 
     objectA.x += aX;
     objectA.y += aY
-
+    
     if (colliding(objectA, [objectB])) {
         throw new Error('Collision detected');
     }
@@ -166,22 +163,66 @@ const determineInputs = () => {
     return inputs;
 }
 
+const updateWeights = (value) => {
+    nn.forEach(layer => {
+        layer.neurons.forEach((neuron) => {
+            if(neuron.weights && neuron.activated) {
+                neuron.weights.forEach((_, i) => {
+                    neuron.weights[i] += value;
+                })
+
+                neuron.activated = false;
+                neuron.value = 0;
+            }
+        })
+    })
+}
+
 const loop = async () => {
+    
     reset();
-    while (Date.now() <= end) {
+    while (true) {
         console.clear();
         console.log('\n');
         console.log(render());
         try {
             const inputs = determineInputs();
             const outputs = determineOutputs(nn, inputs);
+            const currentCoords = [objectA.x, objectA.y]
+            console.log(outputs);
             update(outputs);
+            const newCoords = [objectA.x, objectA.y];
+            const finishCoords = [25, 10];
+            const didMove = currentCoords[0] !== newCoords[0] || currentCoords[1] !== newCoords[1];
+            const prevDistanceToFinish = finishCoords[0] + finishCoords[1] - currentCoords[0] + currentCoords[1];
+            const newDistanceToFinish = finishCoords[0] + finishCoords[1] - newCoords[0] + newCoords[1];
+            
+       
+            let updateWeight = 0;
+            if(didMove) {
+                updateWeight += 0.05;
+            } else {
+                updateWeight -= 0.01;
+            }
+
+           
+            if(newDistanceToFinish < prevDistanceToFinish) {
+                updateWeight += 0.05;
+            } else {
+                updateWeight -= 0.01;
+            }
+
+            console.log(updateWeight);
+            updateWeights(updateWeight);
             
         } catch (e) {
+            updateWeights(-0.1);
             reset();
         }
 
-        await delay(500) /// waiting 1 second.
+       
+
+        await delay(10) /// waiting 1 second.
     }
 }
 
