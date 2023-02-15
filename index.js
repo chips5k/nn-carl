@@ -53,9 +53,9 @@ const determineOutputs = (nn, inputs) => {
             const prevLayer = nn[layerIndex - 1];
             layer.neurons.forEach((neuron) => {
                 const sum = prevLayer.neurons.reduce((acc, pn, pni) => {
-                    if (pn.activated) {
+                    //if (pn.activated) {
                         return acc + pn.value * neuron.weights[pni];
-                    }
+                    //}
                     return acc;
                 }, neuron.bias);
                 neuron.value = sum;
@@ -117,15 +117,15 @@ const getBoundaryCollisions = (object) => {
     }
 
     if (object[0] > BOARD_MAX_X) {
-        collisions[3] += true;
+        collisions[3] = true;
     }
 
     if (object[1] < 0) {
-        collisions[0] += true;
+        collisions[0] = true;
     }
 
-    if (object[1] > BOARD_MAX_X) {
-        collisions[2] += true;
+    if (object[1] > BOARD_MAX_Y) {
+        collisions[2] = true;
     }
 
     return collisions;
@@ -160,7 +160,7 @@ const determineInputs = () => {
 
     const inputs = [0, 0, 0, 0];
 
-    if (backwardY <= 0) {
+    if (backwardY >= 0) {
         inputs[0] = 1;
     }
 
@@ -168,7 +168,7 @@ const determineInputs = () => {
         inputs[1] = 1;
     }
 
-    if (forwardY >= BOARD_MAX_Y) {
+    if (forwardY <= BOARD_MAX_Y) {
         inputs[2] = 1
     }
 
@@ -188,15 +188,15 @@ const backProp = (weights) => {
         // ];
     // iterate from bottom to top starting with the outputs
     nn[2].neurons.forEach((n, i) => {
-        if(n.activated) {
-            n.weights.forEach((w, wi) => {
-                // TODO in future use the current neuron weights to determine how much they should each be modified 
-                // rather than a blanket change
-                n.weights[wi] += weights[i] / 4;
-                n.value = 0;
-                n.activated = false;
-            });
-        }
+        n.weights.forEach((w, wi) => {
+            // TODO in future use the current neuron weights to determine how much they should each be modified 
+            // rather than a blanket change
+            //console.log(n.weights[wi], weights[i], weights[i] / 4)
+            n.weights[wi] += (weights[i] / 4);
+            //console.log(n.weights);
+            n.value = 0;
+            n.activated = false;
+        });
     });
 
     // TODO propagate to the hidden layer.
@@ -222,8 +222,8 @@ const loop = async () => {
         const currentCoords = [objectA.x, objectA.y]
         console.log({ outputs })
 
-        const aX = -outputs[1] + outputs[3];
-        const aY = -outputs[0] + outputs[2];
+        const aX = outputs[1] + -outputs[3];
+        const aY = outputs[0] + -outputs[2];
         console.log({aX, aY});
         objectA.x += aX;
         objectA.y += aY
@@ -245,54 +245,76 @@ const loop = async () => {
         
         console.log({direction});
         if (direction[0] === 'Backward') {
-            weights[1] += 0.1
+            weights[1] += 0.05
         }
 
         if(direction[0] === 'Forward') {
-            weights[3] += 0.1
+            weights[3] += 0.05
         }
 
         if(direction[1] === 'Downward') {
-            weights[2] += 0.1;
+            weights[2] += 0.05;
         }
 
         if(direction[1] === 'Upward') {
-            weights[0] += 0.1;
+            weights[0] += 0.05;
+        }
+
+        //handle cases where no movement - tie breaker
+        if(outputs[0] === 0 && outputs[2] === 0) {
+            const index = Math.round(Math.random()) ? 0 : 2;
+            weights[index] += 0.05;
+        }
+
+        if(outputs[1] === 0 && outputs[3] === 0) {
+            const index = Math.round(Math.random()) ? 1 : 3;
+            weights[index] += 0.05;
+        }
+
+        //Handle cases where outputs are same for Y - tie breaker
+        if(outputs[0] !== 0 && outputs[2] !== 0) {
+            const index = Math.round(Math.random()) ? 0 : 2;
+            weights[index] -= 0.05;
+        }
+
+        //Handle cases where outputs are same for X
+        if(outputs[1] != 0 && outputs[3] != 0) {
+            const index = Math.round(Math.random()) ? 1 : 3;
+            weights[index] -= 0.05;
         }
 
         // Penalize for no movement
-        if (direction[0] === 'None') {
-            weights[1] -= 0.1
-        }
+        // if(direction[0] === 'None' && direction[1] === 'None') {
+        //     if (direction[0] === 'None') {
+        //         weights[1] -= 0.01
+        //         weights[3] -= 0.01
+        //     }
 
-        if(direction[0] === 'None') {
-            weights[3] -= 0.1
-        }
-
-        if(direction[1] === 'None') {
-            weights[2] -= 0.1;
-        }
-
-        if(direction[1] === 'None') {
-            weights[0] -= 0.1;
-        }
+        //     if(direction[1] === 'None') {
+        //         weights[2] -= 0.01;
+        //         weights[0] -= 0.01;
+        //     }
+        // }
 
           
         // TODO calculate where the collision occured, e.g was it caused by diagonal movement or a single axis
         const boundaryCollisions = getBoundaryCollisions(newCoords);
 
         weights.map((w, i) => {
-            return w - (boundaryCollisions[i] ? -0.1 : 0)
+            return w - (boundaryCollisions[i] ? -0.5 : 0)
         });
 
         const objectCollisions = getObjectCollisions(currentCoords, newCoords, [objectB.x, objectB.y]);
 
         
         // Next feed this back into the inputs
-        const collided = boundaryCollisions.some(x => x !== 0);
+        const collided = boundaryCollisions.some(x => x === true);
         console.log({weights});
+        console.log({collided, boundaryCollisions});
         backProp(weights);
-        await delay(1000) /// waiting 1 second.
+        // console.log('[ backprop complete ]');
+        // console.log(nn[2].neurons);
+        await delay(100) /// waiting 1 second.
         
         if (collided) {
             reset();
