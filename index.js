@@ -312,13 +312,13 @@ const loop = async () => {
         console.log({weights});
         console.log({collided, boundaryCollisions});
         backProp(weights);
-        // console.log('[ backprop complete ]');
-        // console.log(nn[2].neurons);
+        if (collided) {
+            objectA.x = currentCoords[0];
+            objectA.y = currentCoords[1];
+        }
         await delay(100) /// waiting 1 second.
         
-        if (collided) {
-            reset();
-        }
+        
     }
 }
 
