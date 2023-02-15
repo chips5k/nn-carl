@@ -186,18 +186,20 @@ const backProp = (weights) => {
         //     0, // + y
         //     0 // + x
         // ];
-    nn.forEach(layer => {
-        layer.neurons.forEach((neuron) => {
-            if (neuron.weights && neuron.activated) {
-                neuron.weights.forEach((_, i) => {
-                    neuron.weights[i] += value;
-                })
+    // iterate from bottom to top starting with the outputs
+    nn[2].neurons.forEach((n, i) => {
+        if(n.activated) {
+            n.weights.forEach((w, wi) => {
+                // TODO in future use the current neuron weights to determine how much they should each be modified 
+                // rather than a blanket change
+                n.weights[wi] += weights[i] / 4;
+                n.value = 0;
+                n.activated = false;
+            });
+        }
+    });
 
-                neuron.activated = false;
-                neuron.value = 0;
-            }
-        })
-    })
+    // TODO propagate to the hidden layer.
 }
 
 const loop = async () => {
@@ -220,18 +222,13 @@ const loop = async () => {
         const currentCoords = [objectA.x, objectA.y]
         console.log({ outputs })
 
-        const aX = outputs[1] + -outputs[3];
-        const aY = outputs[0] + -outputs[2];
-
+        const aX = -outputs[1] + outputs[3];
+        const aY = -outputs[0] + outputs[2];
+        console.log({aX, aY});
         objectA.x += aX;
         objectA.y += aY
-
+        console.log({objectA});
         const newCoords = [objectA.x, objectA.y];
-        console.log({ currentCoords, newCoords });
-        const finishCoords = [25, 10];
-        const didMove = currentCoords[0] !== newCoords[0] || currentCoords[1] !== newCoords[1];
-        const prevDistanceToFinish = finishCoords[0] + finishCoords[1] - currentCoords[0] + currentCoords[1];
-        const newDistanceToFinish = finishCoords[0] + finishCoords[1] - newCoords[0] + newCoords[1];
 
         const weights = [0,0,0,0];
         const change = {
@@ -239,46 +236,64 @@ const loop = async () => {
             y: newCoords[1] - currentCoords[1]
         };
 
-        const direction = [
-            change.x !== 0 ? change.x < 0 ? 'Backward' : 'Forward' : 'none',
-            change.y !== 0 ? change.y < 0 ? 'Downward' : 'Upward' : 'none'
-        ];
+        console.log({change});
 
+        const direction = [
+            change.x !== 0 ? change.x < 0 ? 'Backward' : 'Forward' : 'None',
+            change.y !== 0 ? change.y > 0 ? 'Downward' : 'Upward' : 'None'
+        ];
+        
+        console.log({direction});
         if (direction[0] === 'Backward') {
-            weights[1] += 0.01
+            weights[1] += 0.1
         }
 
         if(direction[0] === 'Forward') {
-            weights[3] += 0.01
+            weights[3] += 0.1
         }
 
         if(direction[1] === 'Downward') {
-            weights[0] += 0.01;
+            weights[2] += 0.1;
         }
 
         if(direction[1] === 'Upward') {
-            weights[0] += 0.01;
+            weights[0] += 0.1;
+        }
+
+        // Penalize for no movement
+        if (direction[0] === 'None') {
+            weights[1] -= 0.1
+        }
+
+        if(direction[0] === 'None') {
+            weights[3] -= 0.1
+        }
+
+        if(direction[1] === 'None') {
+            weights[2] -= 0.1;
+        }
+
+        if(direction[1] === 'None') {
+            weights[0] -= 0.1;
         }
 
           
         // TODO calculate where the collision occured, e.g was it caused by diagonal movement or a single axis
         const boundaryCollisions = getBoundaryCollisions(newCoords);
 
-        weights.map(w, i => {
-            return w - (boundaryCollisions[i] ? 0.05 : 0)
+        weights.map((w, i) => {
+            return w - (boundaryCollisions[i] ? -0.1 : 0)
         });
 
         const objectCollisions = getObjectCollisions(currentCoords, newCoords, [objectB.x, objectB.y]);
 
         
         // Next feed this back into the inputs
-        const collided = boundaryCollisions.some(x => { console.log({ x }); return x !== 0 });
-
+        const collided = boundaryCollisions.some(x => x !== 0);
+        console.log({weights});
         backProp(weights);
-        console.log({ collided });
-
         await delay(1000) /// waiting 1 second.
-
+        
         if (collided) {
             reset();
         }
